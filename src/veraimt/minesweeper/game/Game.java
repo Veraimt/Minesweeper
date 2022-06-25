@@ -22,6 +22,9 @@ public class Game {
     //List of Bombs
     private final LinkedList<Bomb> bombs = new LinkedList<>();
 
+    //GameState
+    private GameState state = GameState.BLANK;
+
 
     //Listeners
     private final LinkedList<Runnable> winListeners = new LinkedList<>();
@@ -72,6 +75,7 @@ public class Game {
                 bombs++;
             }
         }
+        state = GameState.OK;
     }
 
     /**
@@ -260,5 +264,12 @@ public class Game {
                 ", flags=" + flags +
                 ", grid=" + s +
                 '}';
+    }
+
+    private enum GameState{
+        BLANK,
+        OK,
+        WIN,
+        LOSE;
     }
 }

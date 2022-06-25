@@ -10,7 +10,7 @@ import java.util.concurrent.atomic.AtomicReference;
 public class Minesweeper {
     private static Game game;
     public static void main(String[] args) {
-        createGame(20, 20, 40);
+        createGame(25, 25, 40);
 
         AtomicReference<Window> w = new AtomicReference<>();
 
