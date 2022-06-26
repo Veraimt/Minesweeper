@@ -2,6 +2,7 @@ package veraimt.minesweeper.ui;
 
 import veraimt.minesweeper.game.Game;
 import veraimt.minesweeper.game.tiles.BaseTile;
+import veraimt.minesweeper.game.tiles.Bomb;
 import veraimt.minesweeper.game.tiles.Tile;
 
 import javax.imageio.ImageIO;
@@ -9,20 +10,17 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.awt.event.MouseListener;
-import java.awt.event.MouseMotionListener;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.LinkedList;
-import java.util.Timer;
 
 public class Window extends JFrame {
 
     private static final int WIDTH = 800, HEIGHT = 600;
 
     //Resources
-    private final Image image;
+    private final Image flagImg;
+    private final Image bombImg;
 
     //Components
     private final JPanel infoPanel;
@@ -45,7 +43,8 @@ public class Window extends JFrame {
 
         //Loading Resources
         try {
-            image = ImageIO.read(getClass().getClassLoader().getResource("flag.png"));
+            flagImg = ImageIO.read(getClass().getClassLoader().getResource("flag.png"));
+            bombImg = ImageIO.read(getClass().getClassLoader().getResource("bomb.png"));
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -60,7 +59,6 @@ public class Window extends JFrame {
         infoPanel.setBackground(Color.CYAN);
         infoPanel.add(flags);
 
-        gameCanvas.setBackground(Color.GRAY);
 
         flags.setText(String.valueOf(game.flags));
 
@@ -69,7 +67,7 @@ public class Window extends JFrame {
 
         //Adding Components
         add(infoPanel, BorderLayout.PAGE_START);
-        add(gameCanvas, BorderLayout.CENTER);
+        add(gameCanvas);
 
 
         pack();
@@ -96,6 +94,7 @@ public class Window extends JFrame {
         private static final int MIN_CELL_SIZE = 30;
 
         private int cellSize = MIN_CELL_SIZE;
+        private int imgSize = 20;
 
 
         private static final Color[] COLORS = {Color.BLUE, Color.CYAN, Color.GREEN, Color.YELLOW,
@@ -116,6 +115,8 @@ public class Window extends JFrame {
             //setMinimumSize(new Dimension(game.width * cellSize, game.height * cellSize));
             setPreferredSize(new Dimension(game.width * cellSize, game.height * cellSize));
 
+            setBackground(Color.GRAY);
+
             game.addTileUpdateListener(baseTiles -> {
                 for (var tile : baseTiles) {
                     repaint(tile.x*cellSize, tile.y*cellSize, cellSize, cellSize);
@@ -135,15 +136,16 @@ public class Window extends JFrame {
                         System.out.printf(sdf.format(new Date())
                                 + "-> Click at x=%1$d, y=%2$d, click=%3$d\n", e.getX(), e.getY(), e.getButton());
 
-                        int tileX = e.getX() / cellSize;
-                        int tileY = e.getY() / cellSize;
+                        Point point = getTilePosAt(e.getX(), e.getY());
+                        if (point == null)
+                            return;
 
 
                         switch (e.getButton()) {
                             //Left
-                            case 1 -> game.search(tileX, tileY);
+                            case 1 -> game.search(point.x, point.y);
                             //Right
-                            case 3 -> game.toggleFlag(tileX, tileY);
+                            case 3 -> game.toggleFlag(point.x, point.y);
 
                         }
                         flags.setText(String.valueOf(game.flags));
@@ -155,6 +157,9 @@ public class Window extends JFrame {
 
         @Override
         public void update(Graphics g) {
+            System.out.println("Call to Update");
+            System.out.println("Bounds: " + g.getClipBounds());
+
             long time = System.currentTimeMillis();
             Rectangle clip = g.getClipBounds();
 
@@ -164,6 +169,7 @@ public class Window extends JFrame {
             int yStart = clip.y / cellSize;
             int yEnd = yStart + (clip.height-1) / cellSize;
 
+            g.clearRect(xStart, yStart, xEnd-xStart, yEnd-yStart);
             drawArea(g, xStart, xEnd, yStart, yEnd);
 
             System.out.println("Update took " + (System.currentTimeMillis() - time) + "ms");
@@ -187,19 +193,23 @@ public class Window extends JFrame {
                     //Tile being processed in current iteration
                     BaseTile currentTile = game.grid[x][y];
 
+                    int xOrigin = x*cellSize;
+                    int yOrigin = y*cellSize;
 
                     g.setColor(Color.LIGHT_GRAY);
-                    g.fill3DRect(x*cellSize, y*cellSize, cellSize, cellSize, !currentTile.isVisible);
+                    g.fill3DRect(xOrigin, yOrigin, cellSize, cellSize, !currentTile.isVisible);
 
-                    int xCenter = x*cellSize + cellSize/2;
-                    int yCenter = y*cellSize + cellSize/2;
+                    int xCenter = xOrigin + cellSize/2;
+                    int yCenter = yOrigin + cellSize/2;
+
 
                     if (!currentTile.isVisible) {
                         if (currentTile.hasFlag) {
-                            g.drawImage(image, xCenter-10, yCenter-10, 20, 20, this);
+                            drawImage(g, flagImg, xCenter, yCenter);
                         }
                         continue;
                     }
+
 
                     if (currentTile instanceof Tile tile) {
 
@@ -214,9 +224,30 @@ public class Window extends JFrame {
 
                         g.drawString(String.valueOf(tile.getCount()), xCenter - (w / 2), yCenter + (h / 4));
                     }
+                    else if (currentTile instanceof Bomb) {
+                        if (currentTile.hasFlag)
+                            drawImage(g, flagImg, xCenter, yCenter);
+                        else
+                            drawImage(g, bombImg, xCenter, yCenter);
+                    }
 
                 }
             }
+        }
+
+        private void drawImage(Graphics g, Image img, int xCenter, int yCenter) {
+            g.drawImage(img, xCenter-imgSize/2, yCenter-imgSize/2, imgSize, imgSize, this);
+        }
+
+        private Point getTilePosAt(int x, int y) {
+            int tileX = x / cellSize;
+            int tileY = y / cellSize;
+
+            BaseTile tile = game.getTileAt(tileX,tileY);
+
+            if (tile == null)
+                return null;
+            return new Point(tile.x, tile.y);
         }
 
     }

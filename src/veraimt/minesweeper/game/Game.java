@@ -20,7 +20,7 @@ public class Game {
     public final BaseTile[][] grid;
 
     //List of Bombs
-    private final LinkedList<Bomb> bombs = new LinkedList<>();
+    private final HashSet<Bomb> bombs = new HashSet<>();
 
     //GameState
     private GameState state = GameState.BLANK;
@@ -28,7 +28,8 @@ public class Game {
 
     //Listeners
     private final LinkedList<Runnable> winListeners = new LinkedList<>();
-    private final LinkedList<Consumer<Set<BaseTile>>> tileUpdateListeners = new LinkedList<>();
+    private final LinkedList<Consumer<GameState>> stateChangeListeners = new LinkedList<>();
+    private final LinkedList<Consumer<Set<? extends BaseTile>>> tileUpdateListeners = new LinkedList<>();
 
     /**
      * Creates a game with the given width and height and randomly places the given amount of Bombs
@@ -38,6 +39,10 @@ public class Game {
      */
     public Game(int width, int height, int bombs) {
         this(width, height);
+
+        if (bombs > width * height)
+            throw new IllegalArgumentException(bombs + " Bombs don't fit into a " + width + "*" + height + " grid!");
+
         this.flags = bombs;
         randomize(bombs);
     }
@@ -139,13 +144,18 @@ public class Game {
         if (!bombs.stream().allMatch(bomb -> bomb.hasFlag))
             return;
 
+        Set<BaseTile> tiles = new HashSet<>();
         for (var row : grid)
             for (var tile : row) {
-                if (tile instanceof Tile)
+                if (tile instanceof Tile) {
+                    tiles.add(tile);
                     tile.isVisible = true;
+                }
             }
 
+        tileUpdate(tiles);
         winListeners.forEach(Runnable::run);
+        changeState(GameState.WIN);
     }
 
     /**
@@ -155,7 +165,7 @@ public class Game {
      */
     public void search(int x, int y) {
         BaseTile tile = grid[x][y];
-        if (tile instanceof Bomb) {
+        if (tile instanceof Bomb bomb) {
             lose();
         } else {
             if (!(tile instanceof Tile)) {
@@ -165,7 +175,7 @@ public class Game {
         }
     }
 
-    private void tileUpdate(Set<BaseTile> tiles) {
+    private void tileUpdate(Set<? extends BaseTile> tiles) {
         tileUpdateListeners.forEach(consumer -> consumer.accept(tiles));
     }
 
@@ -218,8 +228,20 @@ public class Game {
     /**
      * Executed when the game is lost (searching a Bomb)
      */
-    private void lose() {}
+    private void lose() {
+        System.out.println("Lose");
+        for (var bomb : bombs)
+            bomb.isVisible = true;
+        tileUpdate(bombs);
+        changeState(GameState.LOSE);
+    }
 
+
+    public BaseTile getTileAt(int x, int y) {
+        if (x >= width || y >= height)
+            return null;
+        return grid[x][y];
+    }
 
     //Listener adding
 
@@ -247,8 +269,17 @@ public class Game {
         winListeners.remove(r);
     }
 
-    public void addTileUpdateListener(Consumer<Set<BaseTile>> consumer) {
+    public void addStateChangeListener(Consumer<GameState> c) {
+        stateChangeListeners.add(c);
+    }
+
+    public void addTileUpdateListener(Consumer<Set<? extends BaseTile>> consumer) {
         tileUpdateListeners.add(consumer);
+    }
+
+    private void changeState(GameState newState) {
+        state = newState;
+        stateChangeListeners.forEach(gameStateConsumer -> gameStateConsumer.accept(newState));
     }
 
     @Override

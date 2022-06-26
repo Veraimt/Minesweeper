@@ -1,8 +1,5 @@
 package veraimt.minesweeper.game.tiles;
 
-import java.awt.*;
-import java.util.Optional;
-
 public class Tile extends BaseTile {
 
     private byte count;

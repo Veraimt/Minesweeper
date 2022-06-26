@@ -4,13 +4,12 @@ import veraimt.minesweeper.game.Game;
 import veraimt.minesweeper.ui.Window;
 
 import javax.swing.*;
-import java.util.Scanner;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class Minesweeper {
     private static Game game;
     public static void main(String[] args) {
-        createGame(25, 25, 40);
+        createGame(15, 15, 7);
 
         AtomicReference<Window> w = new AtomicReference<>();
 
