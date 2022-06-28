@@ -1,7 +1,8 @@
 package veraimt.minesweeper;
 
 import veraimt.minesweeper.game.Game;
-import veraimt.minesweeper.ui.Window;
+import veraimt.minesweeper.ui.GUI;
+import veraimt.minesweeper.ui.GameWindow;
 
 import javax.swing.*;
 import java.util.concurrent.atomic.AtomicReference;
@@ -11,14 +12,14 @@ public class Minesweeper {
     public static void main(String[] args) {
         createGame(15, 15, 7);
 
-        AtomicReference<Window> w = new AtomicReference<>();
+        AtomicReference<GameWindow> w = new AtomicReference<>();
 
-        w.set(new Window(game));
-        w.get().setVisible(true);
+        //w.set(new GameWindow(game));
+        //w.get().setVisible(true);
 
 
         SwingUtilities.invokeLater(() -> {
-
+            new GUI();
         });
 
     }

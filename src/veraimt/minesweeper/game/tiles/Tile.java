@@ -12,6 +12,29 @@ public class Tile extends BaseTile {
         count++;
     }
 
+    public void decrementCount() {
+        if (count > 0)
+            count--;
+    }
+
+
+    /**
+     * Evaluates the count of this Tile according to the game rules
+     * @param grid game grid
+     */
+    public void evaluateCounts(BaseTile[][] grid) {
+        count = 0;
+        super.evaluateCounts(grid);
+    }
+
+    @Override
+    protected void evaluateTile(BaseTile tile) {
+        if (tile instanceof Bomb)
+            incrementCount();
+        else if (tile instanceof Tile t)
+            t.decrementCount();
+    }
+
     public byte getCount() {
         return count;
     }

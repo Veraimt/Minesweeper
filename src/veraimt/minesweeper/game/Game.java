@@ -44,7 +44,6 @@ public class Game {
             throw new IllegalArgumentException(bombs + " Bombs don't fit into a " + width + "*" + height + " grid!");
 
         this.flags = bombs;
-        randomize(bombs);
     }
 
     /**
@@ -65,40 +64,86 @@ public class Game {
         }
     }
 
+    public void randomize(int xFirstClick, int yFirstClick) {
+        randomize(flags, xFirstClick, yFirstClick);
+    }
+
     /**
      * Randomly places the given amount of Bombs onm the grid
      * @param bombs amount of Bombs to be randomly placed
      */
-    private void randomize(int bombs) {
-        //placing Bombs
-        for (;bombs > 0; bombs--) {
-            //Determining random x,y Coordinates in bounds of grid array
-            int x = RANDOM.nextInt(grid.length);
-            int y = RANDOM.nextInt(grid[x].length);
+    private void randomize(int bombs, int xFirstClick, int yFirstClick) {
+        if (grid[xFirstClick][yFirstClick] instanceof Tile tile) {
+            //placing Bombs
+            while (bombs > 0) {
+                //Determining random x,y Coordinates in bounds of grid array
+                int x = RANDOM.nextInt(grid.length);
+                int y = RANDOM.nextInt(grid[x].length);
 
-            if(!setBomb(x, y)) {
-                bombs++;
+                //TODO DEBUG
+                System.out.println("-----");
+                System.out.println(bombs + " Bombs left");
+                System.out.println("x=" + x + ", y=" + y);
+                System.out.println("Tile.count=" + tile.getCount());
+
+                if (x == tile.x && y == tile.y)
+                    continue;
+
+                Bomb b = setBomb(x, y);
+
+                if(b == null) {
+                    continue;
+                }
+
+
+                if (tile.getCount() != 0) {
+                    removeBomb(b);
+                    //TODO DEBUG
+                    System.out.println(tile);
+                    continue;
+                }
+
+
+                bombs--;
+
             }
-        }
-        state = GameState.OK;
+            changeState(GameState.OK);
+            //TODO DEBUG
+            System.out.println(this);
+        } else throw new IllegalStateException("Game Grid should be blank");
+
+
     }
 
     /**
-     * Places a Bomb on the given coordinates, returning its success
+     * Places a Bomb on the given coordinates, returning the spawned Bomb
      * @param x x-coordinate
      * @param y y-coordinate
-     * @return true if the Bomb was placed, otherwise false
+     * @return the Bomb if it was placed, otherwise null
      */
-    private boolean setBomb(int x, int y) {
+    private Bomb setBomb(int x, int y) {
         if (grid[x][y] instanceof Bomb)
-            return false;
+            return null;
 
         Bomb b = new Bomb(x, y);
+        //TODO DEBUG
+        System.out.println("Adding Bomb " + b);
         bombs.add(b);
         grid[x][y] = b;
         b.evaluateCounts(grid);
+        //evaluateCounts();
 
-        return true;
+        return b;
+    }
+
+    private void removeBomb(Bomb bomb) {
+        //TODO DEBUG
+        System.out.println("Removing Bomb " + bomb);
+        bombs.remove(bomb);
+        Tile tile = new Tile(bomb.x, bomb.y);
+        grid[bomb.x][bomb.y] = tile;
+        tile.evaluateCounts(grid);
+        //evaluateCounts();
     }
 
     /**
@@ -107,7 +152,7 @@ public class Game {
      * @param y y-coordinate
      */
     public void spawnBomb(int x, int y) {
-        if(setBomb(x, y))
+        if(setBomb(x, y) != null)
             flags++;
     }
 
@@ -156,6 +201,8 @@ public class Game {
         tileUpdate(tiles);
         winListeners.forEach(Runnable::run);
         changeState(GameState.WIN);
+        //TODO DEBUG
+        System.out.println("Win");
     }
 
     /**
@@ -229,6 +276,7 @@ public class Game {
      * Executed when the game is lost (searching a Bomb)
      */
     private void lose() {
+        //TODO DEBUG
         System.out.println("Lose");
         for (var bomb : bombs)
             bomb.isVisible = true;
@@ -241,6 +289,10 @@ public class Game {
         if (x >= width || y >= height)
             return null;
         return grid[x][y];
+    }
+
+    public GameState getState() {
+        return state;
     }
 
     //Listener adding
@@ -293,11 +345,12 @@ public class Game {
                 "width=" + width +
                 ", height=" + height +
                 ", flags=" + flags +
+                ", state=" + state +
                 ", grid=" + s +
                 '}';
     }
 
-    private enum GameState{
+    public enum GameState{
         BLANK,
         OK,
         WIN,

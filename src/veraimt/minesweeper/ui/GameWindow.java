@@ -14,7 +14,7 @@ import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
-public class Window extends JFrame {
+public class GameWindow extends JFrame {
 
     private static final int WIDTH = 800, HEIGHT = 600;
 
@@ -30,7 +30,7 @@ public class Window extends JFrame {
     //Other
     public Game game;
 
-    public Window(Game game) {
+    public GameWindow(Game game) {
         super("Minesweeper");
         this.game = game;
 
@@ -109,7 +109,7 @@ public class Window extends JFrame {
         }
 
         public GameCanvas() {
-            //super(Window.this.getGraphicsConfiguration());
+            //super(GameWindow.this.getGraphicsConfiguration());
 
             //setSize(game.width * cellSize, game.height * cellSize);
             //setMinimumSize(new Dimension(game.width * cellSize, game.height * cellSize));
@@ -140,6 +140,15 @@ public class Window extends JFrame {
                         if (point == null)
                             return;
 
+                        if (game.getState().equals(Game.GameState.BLANK)) {
+                            try {
+                                game.randomize(point.x, point.y);
+                            } catch (Exception ex) {
+                                ex.printStackTrace();
+                                System.out.println(game);
+                            }
+
+                        }
 
                         switch (e.getButton()) {
                             //Left
