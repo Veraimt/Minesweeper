@@ -14,7 +14,6 @@ public class GUI extends JFrame {
 
     private final GridSizeSliderPanel sliderPanel = new GridSizeSliderPanel();
     private final JComboBox<Difficulty> difficultySelector = new JComboBox<>(Difficulty.values());
-    private final JButton startButton = new JButton();
 
     public GUI() {
         super("Minesweeper");
@@ -29,14 +28,13 @@ public class GUI extends JFrame {
             System.out.println(difficultySelector.getSelectedItem());
         });
 
-        JPanel difficultyPanel = new JPanel(new GridLayout());
-        difficultyPanel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createTitledBorder("Difficulty"),
-                BorderFactory.createEmptyBorder(5,5,5,5)));
+        BorderedPanel difficultyPanel = new BorderedPanel("Difficulty");
+        difficultyPanel.setLayout(new GridLayout());
         difficultyPanel.add(difficultySelector);
 
 
         //Start Button
+        JButton startButton = new JButton();
         startButton.setText("START");
         startButton.addActionListener(l -> {
             gameWindow = new GameWindow(new Game(sliderPanel.getValue(), sliderPanel.getValue(),
@@ -71,7 +69,8 @@ public class GUI extends JFrame {
                 layout.createSequentialGroup()
                         .addComponent(sliderPanel)
                         .addComponent(difficultyPanel, GroupLayout.DEFAULT_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE)
-                        .addComponent(startButton)
+                        .addGap(4, 4, Short.MAX_VALUE)
+                        .addComponent(startButton, GroupLayout.DEFAULT_SIZE, GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
         );
 
         add(mainPanel);
@@ -97,14 +96,12 @@ public class GUI extends JFrame {
     }
 
 
-    private abstract class SliderPanel extends JPanel {
+    private abstract class SliderPanel extends BorderedPanel {
         protected final JLabel label = new JLabel();
         protected final JSlider slider = new JSlider();
 
         public SliderPanel(String panelName) {
-            setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createTitledBorder(panelName),
-                    BorderFactory.createEmptyBorder(5,5,5,5)));
+            super(panelName);
 
             GroupLayout layout = new GroupLayout(this);
 
@@ -137,6 +134,15 @@ public class GUI extends JFrame {
 
         public int getValue() {
             return slider.getValue();
+        }
+    }
+
+    private class BorderedPanel extends JPanel {
+
+        public BorderedPanel(String panelName) {
+            setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createTitledBorder(panelName),
+                    BorderFactory.createEmptyBorder(5,5,5,5)));
         }
     }
 

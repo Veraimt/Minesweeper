@@ -16,17 +16,11 @@ import java.util.Date;
 
 public class GameWindow extends JFrame {
 
-    private static final int WIDTH = 800, HEIGHT = 600;
-
     //Resources
     private final Image flagImg;
     private final Image bombImg;
 
-    //Components
-    private final JPanel infoPanel;
-    private final GameCanvas gameCanvas;
-    private final JLabel flags;
-
+    private final InfoPanel infoPanel;
     //Other
     public Game game;
 
@@ -36,8 +30,6 @@ public class GameWindow extends JFrame {
 
         //JFrame Metadata
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
-        //setMinimumSize(new Dimension(WIDTH, HEIGHT));
-        setSize(WIDTH, HEIGHT);
         setLocationRelativeTo(null);
         setResizable(false);
 
@@ -50,17 +42,11 @@ public class GameWindow extends JFrame {
         }
 
         //Instantiating Components
-        infoPanel = new JPanel();
-        gameCanvas = new GameCanvas();
-        flags = new JLabel();
-
-        //Configuring Components
-        infoPanel.setSize(WIDTH, 50);
-        infoPanel.setBackground(Color.CYAN);
-        infoPanel.add(flags);
+        infoPanel = new InfoPanel();
+        GameCanvas gameCanvas = new GameCanvas();
 
 
-        flags.setText(String.valueOf(game.flags));
+
 
         System.out.println(infoPanel.getHeight());
         System.out.println(gameCanvas.getHeight());
@@ -72,35 +58,105 @@ public class GameWindow extends JFrame {
 
         pack();
 
-        addMouseListener(new MouseAdapter() {
-            private final SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss.SSS");
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                super.mouseClicked(e);
-                System.out.println("Mouse Event");
-                System.out.printf(sdf.format(new Date())
-                        + "-> Click at x=%1$d, y=%2$d, click=%3$d\n", e.getX(), e.getY(), e.getButton());
+        game.addStateChangeListener(gameState -> {
+            switch (gameState) {
+                case WIN -> infoPanel.statusDisplay.setStatus(InfoPanel.StatusDisplay.Status.WIN);
+                case LOSE -> infoPanel.statusDisplay.setStatus(InfoPanel.StatusDisplay.Status.DEAD);
+            }
+        });
+    }
 
+    private class InfoPanel extends JPanel {
+
+        public final JLabel timerLabel;
+        public final StatusDisplay statusDisplay;
+        public final JLabel flagCountLabel;
+        public InfoPanel() {
+            timerLabel = new JLabel("0");
+            statusDisplay = new StatusDisplay();
+            flagCountLabel = new JLabel();
+
+
+            //Configuring Components
+            Font font = timerLabel.getFont();
+            font = font.deriveFont(18f);
+
+            timerLabel.setFont(font);
+            coolBorder(timerLabel);
+
+            flagCountLabel.setFont(font);
+            flagCountLabel.setText(String.valueOf(game.flags));
+
+
+            JLabel flagIconLabel = new JLabel(new ImageIcon(flagImg));
+
+            GroupLayout layoutInfoPanel = new GroupLayout(this);
+            setLayout(layoutInfoPanel);
+            setBackground(Color.LIGHT_GRAY);
+            coolBorder(this);
+
+
+            layoutInfoPanel.setHorizontalGroup(
+                    layoutInfoPanel.createParallelGroup()
+                            .addGroup(layoutInfoPanel.createSequentialGroup()
+                                    .addComponent(timerLabel))
+                            .addGroup(layoutInfoPanel.createSequentialGroup()
+                                    .addGap(0, 0, Short.MAX_VALUE)
+                                    .addComponent(statusDisplay)
+                                    .addGap(0, 0, Short.MAX_VALUE))
+                            .addGroup(layoutInfoPanel.createSequentialGroup()
+                                    .addGap(0, 0, Short.MAX_VALUE)
+                                    .addComponent(flagIconLabel)
+                                    .addComponent(flagCountLabel))
+            );
+
+            layoutInfoPanel.setVerticalGroup(
+                    layoutInfoPanel.createParallelGroup()
+                            .addComponent(timerLabel, GroupLayout.DEFAULT_SIZE, GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                            .addComponent(statusDisplay)
+                            .addComponent(flagIconLabel)
+                            .addComponent(flagCountLabel, GroupLayout.DEFAULT_SIZE, GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+            );
+        }
+
+        private class StatusDisplay extends JLabel {
+
+            public StatusDisplay() {
+                setIcon(Status.ALIVE.icon);
             }
 
-        });
+            public void setStatus(Status status) {
+                setIcon(status.icon);
+            }
 
+            public enum Status {
+                ALIVE("alive.png"),
+                DEAD("dead.png"),
+                WIN("win.png");
+
+                public final ImageIcon icon;
+
+                Status(String ressource) {
+                    icon = new ImageIcon(getClass().getClassLoader().getResource(ressource));
+                }
+            }
+        }
     }
 
 
-
+    /**
+     * An Extension of {@link JComponent} used to display the Game
+     */
     private class GameCanvas extends JComponent {
-        private static final int LINE_THICKNESS = 2;
-        private static final int MIN_CELL_SIZE = 30;
 
-        private int cellSize = MIN_CELL_SIZE;
-        private int imgSize = 20;
+        private static final int CELL_SIZE = 30;
+        private final int imgSize = CELL_SIZE * 2 / 3;
 
 
         private static final Color[] COLORS = {Color.BLUE, Color.CYAN, Color.GREEN, Color.YELLOW,
                 Color.ORANGE, Color.RED, Color.MAGENTA, Color.BLACK};
 
-        private static final Font FONT = new Font("Serif", Font.BOLD, 24);
+        private static final Font FONT = new Font("Serif", Font.BOLD, (int) (CELL_SIZE * 0.8));
 
         private static Color getTileColor(Tile tile) {
             if (tile.getCount() == 0)
@@ -109,17 +165,13 @@ public class GameWindow extends JFrame {
         }
 
         public GameCanvas() {
-            //super(GameWindow.this.getGraphicsConfiguration());
-
-            //setSize(game.width * cellSize, game.height * cellSize);
-            //setMinimumSize(new Dimension(game.width * cellSize, game.height * cellSize));
-            setPreferredSize(new Dimension(game.width * cellSize, game.height * cellSize));
+            setPreferredSize(new Dimension(game.width * CELL_SIZE, game.height * CELL_SIZE));
 
             setBackground(Color.GRAY);
 
             game.addTileUpdateListener(baseTiles -> {
                 for (var tile : baseTiles) {
-                    repaint(tile.x*cellSize, tile.y*cellSize, cellSize, cellSize);
+                    repaint(tile.x* CELL_SIZE, tile.y* CELL_SIZE, CELL_SIZE, CELL_SIZE);
 
                 }
             });
@@ -130,6 +182,7 @@ public class GameWindow extends JFrame {
                 public void mousePressed(MouseEvent e) {
                     super.mousePressed(e);
 
+                    //New Thread to reduce latency
                     new Thread(() -> {
 
 
@@ -140,24 +193,25 @@ public class GameWindow extends JFrame {
                         if (point == null)
                             return;
 
-                        if (game.getState().equals(Game.GameState.BLANK)) {
-                            try {
+                        switch (game.getState()) {
+                            case BLANK:
                                 game.randomize(point.x, point.y);
-                            } catch (Exception ex) {
-                                ex.printStackTrace();
-                                System.out.println(game);
-                            }
-
+                                break;
+                            case WIN:
+                            case LOSE:
+                                return;
                         }
 
+
+
                         switch (e.getButton()) {
-                            //Left
+                            //Left-Click
                             case 1 -> game.search(point.x, point.y);
-                            //Right
+                            //Right-Click
                             case 3 -> game.toggleFlag(point.x, point.y);
 
                         }
-                        flags.setText(String.valueOf(game.flags));
+                        infoPanel.flagCountLabel.setText(String.valueOf(game.flags));
                     }).start();
                 }
             });
@@ -172,11 +226,11 @@ public class GameWindow extends JFrame {
             long time = System.currentTimeMillis();
             Rectangle clip = g.getClipBounds();
 
-            int xStart = clip.x / cellSize;
-            int xEnd = xStart + (clip.width-1) / cellSize;
+            int xStart = clip.x / CELL_SIZE;
+            int xEnd = xStart + (clip.width-1) / CELL_SIZE;
 
-            int yStart = clip.y / cellSize;
-            int yEnd = yStart + (clip.height-1) / cellSize;
+            int yStart = clip.y / CELL_SIZE;
+            int yEnd = yStart + (clip.height-1) / CELL_SIZE;
 
             g.clearRect(xStart, yStart, xEnd-xStart, yEnd-yStart);
             drawArea(g, xStart, xEnd, yStart, yEnd);
@@ -202,14 +256,14 @@ public class GameWindow extends JFrame {
                     //Tile being processed in current iteration
                     BaseTile currentTile = game.grid[x][y];
 
-                    int xOrigin = x*cellSize;
-                    int yOrigin = y*cellSize;
+                    int xOrigin = x* CELL_SIZE;
+                    int yOrigin = y* CELL_SIZE;
 
                     g.setColor(Color.LIGHT_GRAY);
-                    g.fill3DRect(xOrigin, yOrigin, cellSize, cellSize, !currentTile.isVisible);
+                    g.fill3DRect(xOrigin, yOrigin, CELL_SIZE, CELL_SIZE, !currentTile.isVisible);
 
-                    int xCenter = xOrigin + cellSize/2;
-                    int yCenter = yOrigin + cellSize/2;
+                    int xCenter = xOrigin + CELL_SIZE /2;
+                    int yCenter = yOrigin + CELL_SIZE /2;
 
 
                     if (!currentTile.isVisible) {
@@ -249,8 +303,8 @@ public class GameWindow extends JFrame {
         }
 
         private Point getTilePosAt(int x, int y) {
-            int tileX = x / cellSize;
-            int tileY = y / cellSize;
+            int tileX = x / CELL_SIZE;
+            int tileY = y / CELL_SIZE;
 
             BaseTile tile = game.getTileAt(tileX,tileY);
 
@@ -259,5 +313,11 @@ public class GameWindow extends JFrame {
             return new Point(tile.x, tile.y);
         }
 
+    }
+
+    public static void coolBorder(JComponent component) {
+        component.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(Color.GRAY, 2, true),
+                BorderFactory.createEmptyBorder(5,5,5,5)));
     }
 }

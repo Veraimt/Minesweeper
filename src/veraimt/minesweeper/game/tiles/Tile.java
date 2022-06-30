@@ -18,10 +18,6 @@ public class Tile extends BaseTile {
     }
 
 
-    /**
-     * Evaluates the count of this Tile according to the game rules
-     * @param grid game grid
-     */
     public void evaluateCounts(BaseTile[][] grid) {
         count = 0;
         super.evaluateCounts(grid);

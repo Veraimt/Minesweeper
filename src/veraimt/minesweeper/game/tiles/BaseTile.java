@@ -13,7 +13,7 @@ public abstract class BaseTile {
     }
 
     /**
-     * Evaluates the count of this Tile according to the game rules
+     * Evaluates the count of this and surrounding Tiles according to the game rules
      * @param grid game grid
      */
     public void evaluateCounts(BaseTile[][] grid) {
