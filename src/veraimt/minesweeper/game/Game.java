@@ -27,7 +27,6 @@ public class Game {
 
 
     //Listeners
-    private final LinkedList<Runnable> winListeners = new LinkedList<>();
     private final LinkedList<Consumer<GameState>> stateChangeListeners = new LinkedList<>();
     private final LinkedList<Consumer<Set<? extends BaseTile>>> tileUpdateListeners = new LinkedList<>();
 
@@ -73,6 +72,7 @@ public class Game {
      * @param bombs amount of Bombs to be randomly placed
      */
     private void randomize(int bombs, int xFirstClick, int yFirstClick) {
+        //variable tile -> Tile that was the first clicked
         if (grid[xFirstClick][yFirstClick] instanceof Tile tile) {
             //placing Bombs
             while (bombs > 0) {
@@ -80,26 +80,21 @@ public class Game {
                 int x = RANDOM.nextInt(grid.length);
                 int y = RANDOM.nextInt(grid[x].length);
 
-                //TODO DEBUG
-                System.out.println("-----");
-                System.out.println(bombs + " Bombs left");
-                System.out.println("x=" + x + ", y=" + y);
-                System.out.println("Tile.count=" + tile.getCount());
-
+                //no Bomb at the position of the Tile
                 if (x == tile.x && y == tile.y)
                     continue;
 
+                //trying to place the Bomb
                 Bomb b = setBomb(x, y);
 
+                //placing the Bomb failed
                 if(b == null) {
                     continue;
                 }
 
-
+                //the just placed Bomb caused the count of the Tile to be not 0, so it gets removed
                 if (tile.getCount() != 0) {
                     removeBomb(b);
-                    //TODO DEBUG
-                    System.out.println(tile);
                     continue;
                 }
 
@@ -108,8 +103,6 @@ public class Game {
 
             }
             changeState(GameState.OK);
-            //TODO DEBUG
-            System.out.println(this);
         } else throw new IllegalStateException("Game Grid should be blank");
 
 
@@ -123,27 +116,26 @@ public class Game {
      */
     private Bomb setBomb(int x, int y) {
         if (grid[x][y] instanceof Bomb)
+            //at the given coordinates is already a Bomb
             return null;
 
         Bomb b = new Bomb(x, y);
-        //TODO DEBUG
-        System.out.println("Adding Bomb " + b);
         bombs.add(b);
         grid[x][y] = b;
         b.evaluateCounts(grid);
-        //evaluateCounts();
 
         return b;
     }
 
+    /**
+     * Removes the given Bomb from the game
+     * @param bomb the Bomb to be removed
+     */
     private void removeBomb(Bomb bomb) {
-        //TODO DEBUG
-        System.out.println("Removing Bomb " + bomb);
         bombs.remove(bomb);
         Tile tile = new Tile(bomb.x, bomb.y);
         grid[bomb.x][bomb.y] = tile;
         tile.evaluateCounts(grid);
-        //evaluateCounts();
     }
 
     /**
@@ -183,26 +175,28 @@ public class Game {
      * Checks if the game is won
      */
     private void checkWin() {
+        //used the correct amount of flags
         if (flags != 0)
             return;
 
+        //all Bombs have a Flag
         if (!bombs.stream().allMatch(bomb -> bomb.hasFlag))
             return;
 
+        //revealing all invisible tiles and adding them to a Set for firing a Tile Update
         Set<BaseTile> tiles = new HashSet<>();
         for (var row : grid)
             for (var tile : row) {
                 if (tile instanceof Tile) {
+                    if (tile.isVisible)
+                        continue;
                     tiles.add(tile);
                     tile.isVisible = true;
                 }
             }
 
         tileUpdate(tiles);
-        winListeners.forEach(Runnable::run);
         changeState(GameState.WIN);
-        //TODO DEBUG
-        System.out.println("Win");
     }
 
     /**
@@ -212,19 +206,19 @@ public class Game {
      */
     public void search(int x, int y) {
         BaseTile tile = grid[x][y];
-        if (tile instanceof Bomb bomb) {
+        if (tile instanceof Bomb) {
+            //searching a Bomb -> lose
             lose();
         } else {
             if (!(tile instanceof Tile)) {
+                //this should never happen
                 return;
             }
+            //searching
             floodSearch(x, y);
         }
     }
 
-    private void tileUpdate(Set<? extends BaseTile> tiles) {
-        tileUpdateListeners.forEach(consumer -> consumer.accept(tiles));
-    }
 
     /**
      * Initiates flood-search (revealing Tiles with flood-fill algorithm) at the given coordinates
@@ -248,16 +242,23 @@ public class Game {
         if (!(grid[x][y] instanceof Tile tile))
             return;
 
+        //tile is visible or was already traversed -> no further processing
         if (tile.isVisible || traversedTiles.contains(tile))
             return;
 
+        //revealing process
         if (tile.hasFlag) {
+            //remove the Tiles Flag if it has one
             toggleFlag(tile.x, tile.y);
         }
         tile.isVisible = true;
         traversedTiles.add(tile);
+
+        //only if count == 0 new searches are started
         if (tile.getCount() != 0)
             return;
+
+        //recursive calls
 
         //left, right
         floodSearch(Math.max(0, x-1), y, traversedTiles);
@@ -276,15 +277,19 @@ public class Game {
      * Executed when the game is lost (searching a Bomb)
      */
     private void lose() {
-        //TODO DEBUG
-        System.out.println("Lose");
+        //revealing all Bombs
         for (var bomb : bombs)
             bomb.isVisible = true;
         tileUpdate(bombs);
         changeState(GameState.LOSE);
     }
 
-
+    /**
+     * Returns the BaseTile at the given coordinates
+     * @param x x-coordinate
+     * @param y y-coordinate
+     * @return the BaseTile at the given coordinates if they're in bounds of the internal grid, otherwise null
+     */
     public BaseTile getTileAt(int x, int y) {
         if (x >= width || y >= height)
             return null;
@@ -297,30 +302,6 @@ public class Game {
 
     //Listener adding
 
-    /**
-     * Add a {@link Runnable } to be executed when the game is won
-     * @param r Runnable to be executed
-     */
-    public void addWinListener(Runnable r) {
-        winListeners.add(r);
-    }
-
-    /**
-     * Returns a List containing all {@link Runnable} to be executed when the game is won
-     * @return List of Runnables
-     */
-    public List<Runnable> getWinListeners() {
-        return winListeners;
-    }
-
-    /**
-     * Remove the given {@link Runnable } to be no longer executed when the game is won
-     * @param r Runnable to be no longer executed
-     */
-    public void removeWinListener(Runnable r) {
-        winListeners.remove(r);
-    }
-
     public void addStateChangeListener(Consumer<GameState> c) {
         stateChangeListeners.add(c);
     }
@@ -329,9 +310,14 @@ public class Game {
         tileUpdateListeners.add(consumer);
     }
 
+    //firing Events
     private void changeState(GameState newState) {
         state = newState;
         stateChangeListeners.forEach(gameStateConsumer -> gameStateConsumer.accept(newState));
+    }
+
+    private void tileUpdate(Set<? extends BaseTile> tiles) {
+        tileUpdateListeners.forEach(consumer -> consumer.accept(tiles));
     }
 
     @Override
@@ -354,6 +340,6 @@ public class Game {
         BLANK,
         OK,
         WIN,
-        LOSE;
+        LOSE
     }
 }

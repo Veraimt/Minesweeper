@@ -10,7 +10,7 @@ import java.util.Objects;
 
 public class GUI extends JFrame {
 
-    private GameWindow gameWindow;
+    GameWindow gameWindow;
 
     private final GridSizeSliderPanel sliderPanel = new GridSizeSliderPanel();
     private final JComboBox<Difficulty> difficultySelector = new JComboBox<>(Difficulty.values());
@@ -20,14 +20,17 @@ public class GUI extends JFrame {
         //Window settings
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
         setLocationRelativeTo(null);
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosed(WindowEvent e) {
+                super.windowClosed(e);
+                System.exit(1);
+            }
+        });
 
 
 
         //Difficulty Panel
-        difficultySelector.addActionListener(l -> {
-            System.out.println(difficultySelector.getSelectedItem());
-        });
-
         BorderedPanel difficultyPanel = new BorderedPanel("Difficulty");
         difficultyPanel.setLayout(new GridLayout());
         difficultyPanel.add(difficultySelector);
@@ -37,16 +40,7 @@ public class GUI extends JFrame {
         JButton startButton = new JButton();
         startButton.setText("START");
         startButton.addActionListener(l -> {
-            gameWindow = new GameWindow(new Game(sliderPanel.getValue(), sliderPanel.getValue(),
-                    (int) (Math.pow(sliderPanel.getValue(), 2) *
-                            ((Difficulty) Objects.requireNonNull(difficultySelector.getSelectedItem())).fac)));
-            gameWindow.addWindowListener(new WindowAdapter() {
-                @Override
-                public void windowClosed(WindowEvent e) {
-                    super.windowClosed(e);
-                    setVisible(true);
-                }
-            });
+            gameWindow = new GameWindow(this, createGame());
             gameWindow.setVisible(true);
             this.setVisible(false);
         });
@@ -84,6 +78,12 @@ public class GUI extends JFrame {
         setVisible(true);
     }
 
+    Game createGame() {
+        return new Game(sliderPanel.getValue(), sliderPanel.getValue(),
+                (int) (Math.pow(sliderPanel.getValue(), 2) *
+                        ((Difficulty) Objects.requireNonNull(difficultySelector.getSelectedItem())).fac));
+    }
+
     private class GridSizeSliderPanel extends SliderPanel {
 
         public GridSizeSliderPanel() {
@@ -112,9 +112,7 @@ public class GUI extends JFrame {
             slider.setPaintLabels(true);
             slider.setName(panelName);
 
-            slider.addChangeListener(e -> {
-                label.setText(String.valueOf(slider.getValue()));
-            });
+            slider.addChangeListener(e -> label.setText(String.valueOf(slider.getValue())));
 
 
 
